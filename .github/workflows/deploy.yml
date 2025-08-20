@@ -36,6 +36,7 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel
+        if: env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -43,3 +44,5 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: ${{ github.event_name == 'pull_request' && '' || '--prod' }}
           scope: ${{ secrets.VERCEL_ORG_ID }}
+          github-comment: true
+          github-deployment: false
