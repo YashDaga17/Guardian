@@ -1,23 +1,6 @@
 {
   "version": 2,
-  "name": "guardian-defi",
-  "alias": ["guardian-defi"],
   "regions": ["iad1", "sfo1", "lhr1"],
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
   "env": {
     "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "@walletconnect-project-id",
     "NEXT_PUBLIC_ALCHEMY_API_KEY": "@alchemy-api-key",
