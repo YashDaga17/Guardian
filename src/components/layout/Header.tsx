@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { WalletConnector } from '@/components/wallet/WalletConnector';
+import { WalletConnector } from '@/components/wallet';
 import { useUIStore } from '@/store';
 
 export function Header() {

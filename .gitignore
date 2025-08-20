@@ -259,8 +259,8 @@ $RECYCLE.BIN/
 .Trash-*
 .nfs*
 
-# Blockchain/Web3 related
-wallet/
+# Blockchain/Web3 related - only ignore wallet data/keys, not source code
+wallets/
 keys/
 private/
 secrets/
