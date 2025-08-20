@@ -30,8 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useWalletStore, useUIStore } from '@/store';
-import { formatCurrency } from '@/lib/blockchain/dataProviders';
+import { useUIStore } from '@/store';
 
 const SUPPORTED_CHAINS = [
   { ...mainnet, icon: '🟦' },
