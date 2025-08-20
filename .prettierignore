@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Generated files
+*.min.js
+*.min.css
+*.map
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env*
+
+# Build outputs
+.turbo/
+.vercel/
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp/
+tmp/
+
+# Documentation builds
+docs/build/
+
+# Test coverage
+coverage/
+
+# Linting reports
+*.eslintcache
+
+# Bundle analyzer reports
+.next/analyze/
+
+# Generated types
+*.d.ts
+!src/**/*.d.ts
+
+# SVG files (often generated or have specific formatting)
+*.svg
+
+# Config files with specific formatting
+next.config.js
+tailwind.config.js
+postcss.config.js
