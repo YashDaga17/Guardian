@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, Moon, Sun, Bell, Settings, Search } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Settings, Search, Wallet } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +15,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { WalletConnector } from '@/components/wallet';
+import { ClientOnly } from '@/components/ui/ClientOnly';
 import { useUIStore } from '@/store';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { setSidebarOpen, sidebarOpen, isMobile } = useUIStore();
+  const { setSidebarOpen, sidebarOpen } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
@@ -139,7 +140,14 @@ export function Header() {
           </DropdownMenu>
 
           {/* Wallet Connection */}
-          <WalletConnector />
+          <ClientOnly fallback={
+            <Button variant="outline" className="flex items-center space-x-2">
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Connect Wallet</span>
+            </Button>
+          }>
+            <WalletConnector />
+          </ClientOnly>
         </div>
       </div>
     </header>

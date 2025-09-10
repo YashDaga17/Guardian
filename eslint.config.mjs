@@ -17,8 +17,12 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      ".vercel/**",
       "next-env.d.ts",
       ".next/types/**",
+      "*.tsbuildinfo",
+      "coverage/**",
+      "public/**",
     ],
   },
   {

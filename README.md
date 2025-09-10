@@ -28,6 +28,7 @@
 - **MEV Protection** - Built-in protection against maximal extractable value attacks
 - **Transaction Batching** - Optimize gas costs with transaction batching
 - **Price Impact Analysis** - Real-time price impact calculations
+- **Nitrolite Integration** - State channel optimization for up to 95% gas savings
 
 ### 🔐 Multi-Wallet Support
 - **Multiple Wallet Connectors** - Support for MetaMask, WalletConnect, Coinbase Wallet

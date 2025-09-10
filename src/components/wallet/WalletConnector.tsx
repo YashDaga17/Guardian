@@ -155,11 +155,15 @@ export function WalletConnector() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="flex items-center space-x-2">
-          <Avatar className="h-6 w-6">
-            <AvatarFallback className="text-xs">
-              {address?.slice(2, 4).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          {address ? (
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {address.slice(2, 4).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <Wallet className="h-4 w-4" />
+          )}
           <div className="hidden sm:flex flex-col items-start">
             <span className="text-sm font-medium">{formatAddress(address!)}</span>
             <span className="text-xs text-muted-foreground">

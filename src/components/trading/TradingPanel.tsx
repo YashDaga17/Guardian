@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowUpDown, 
   Settings, 
-  Zap, 
   Clock, 
   AlertTriangle,
   CheckCircle,
   TrendingUp,
-  TrendingDown,
   RefreshCw,
   Shield
 } from 'lucide-react';
@@ -28,17 +26,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/lib/blockchain/dataProviders';
+import { getNitroliteService, type BatchTransaction } from '@/lib/blockchain/nitroliteService';
 
 interface Token {
   symbol: string;
@@ -108,6 +97,99 @@ export function TradingPanel() {
   const [priceImpact, setPriceImpact] = useState(0);
   const [gasFee, setGasFee] = useState(12.50);
   const [batchSavings, setBatchSavings] = useState(8.30);
+  
+  // Nitrolite integration states
+  const [nitroliteEnabled, setNitroliteEnabled] = useState(false);
+  const [gasSavings, setGasSavings] = useState<{
+    currentSavings: number;
+    potentialSavings: number;
+    activeChannels: number;
+  }>({ currentSavings: 0, potentialSavings: 0, activeChannels: 0 });
+
+  // Initialize Nitrolite on component mount
+  useEffect(() => {
+    const initNitrolite = async () => {
+      try {
+        const nitroliteService = getNitroliteService({
+          rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth-mainnet.alchemyapi.io/v2/demo',
+          chainId: 1,
+        });
+        
+        await nitroliteService.initialize();
+        setNitroliteEnabled(true);
+        
+        // Get current gas savings
+        const savings = await nitroliteService.getGasSavingsEstimate();
+        setGasSavings(savings);
+        
+      } catch (error) {
+        console.error('Failed to initialize Nitrolite:', error);
+        setNitroliteEnabled(false);
+      }
+    };
+
+    initNitrolite();
+  }, []);
+
+  // Optimize gas costs using Nitrolite
+  const optimizeGasWithNitrolite = useCallback(async () => {
+    if (!nitroliteEnabled) return;
+
+    try {
+      const nitroliteService = getNitroliteService();
+      const optimization = await nitroliteService.optimizeGasForSwap({
+        fromToken: fromToken.symbol,
+        toToken: toToken.symbol,
+        amount: fromAmount,
+        slippage: slippage,
+      });
+
+      // Update gas estimates with Nitrolite optimization
+      setGasFee(parseFloat(optimization.optimizedGas));
+      setBatchSavings(parseFloat(optimization.savings));
+      
+    } catch (error) {
+      console.error('Nitrolite gas optimization failed:', error);
+    }
+  }, [nitroliteEnabled, fromToken.symbol, toToken.symbol, fromAmount, slippage]);
+
+  // Execute trade with Nitrolite batch optimization
+  const executeTradeWithNitrolite = async () => {
+    if (!nitroliteEnabled) {
+      // Fallback to regular trade execution
+      return executeRegularTrade();
+    }
+
+    try {
+      const nitroliteService = getNitroliteService();
+      
+      // Create batch transaction for the swap
+      const batchTx: BatchTransaction = {
+        to: '0x...', // DEX router address
+        data: '0x...', // Encoded swap data
+        value: fromToken.symbol === 'ETH' ? fromAmount : '0',
+        gasLimit: '200000',
+      };
+
+      const batchId = await nitroliteService.executeBatchTransactions([batchTx]);
+      
+      // Update UI with batch ID
+      console.log('Trade executed with Nitrolite batch ID:', batchId);
+      
+      // Add transaction to your state management
+      // This would integrate with your existing transaction handling
+      
+    } catch (error) {
+      console.error('Nitrolite trade execution failed:', error);
+      // Fallback to regular execution
+      executeRegularTrade();
+    }
+  };
+
+  const executeRegularTrade = async () => {
+    // Your existing trade execution logic
+    console.log('Executing regular trade...');
+  };
 
   // Calculate exchange rate and amounts
   useEffect(() => {
@@ -122,6 +204,13 @@ export function TradingPanel() {
       setPriceImpact(impact);
     }
   }, [fromAmount, fromToken, toToken]);
+
+  // Update gas optimization when trade parameters change
+  useEffect(() => {
+    if (fromAmount && toAmount && nitroliteEnabled) {
+      optimizeGasWithNitrolite();
+    }
+  }, [fromAmount, toAmount, fromToken, toToken, slippage, nitroliteEnabled, optimizeGasWithNitrolite]);
 
   const handleSwapTokens = () => {
     const tempToken = fromToken;
@@ -355,8 +444,29 @@ export function TradingPanel() {
                   <Badge variant="secondary" className="ml-2 text-xs">
                     Save {formatCurrency(batchSavings)}
                   </Badge>
+                  {nitroliteEnabled && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      Nitrolite ⚡
+                    </Badge>
+                  )}
                 </div>
               </div>
+              
+              {nitroliteEnabled && (
+                <div className="flex justify-between text-sm">
+                  <span>State Channel Savings</span>
+                  <div className="text-right">
+                    <span className="text-green-600">
+                      {gasSavings.currentSavings.toFixed(2)}% saved
+                    </span>
+                    {gasSavings.activeChannels > 0 && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {gasSavings.activeChannels} channels
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -408,6 +518,7 @@ export function TradingPanel() {
                 className="w-full" 
                 size="lg"
                 disabled={!canExecuteTrade()}
+                onClick={executeTradeWithNitrolite}
               >
                 {mevProtection && <Shield className="h-4 w-4 mr-2" />}
                 Swap {fromToken.symbol} for {toToken.symbol}

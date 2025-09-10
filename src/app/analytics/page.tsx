@@ -5,22 +5,15 @@ import {
   TrendingUp, 
   TrendingDown, 
   Download, 
-  Calendar, 
-  Target,
   BarChart3,
-  PieChart,
   Activity,
-  DollarSign,
-  Percent,
   AlertTriangle,
-  Award,
-  Filter
+  Award
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, 
   SelectContent, 
@@ -31,8 +24,6 @@ import {
 import { 
   LineChart, 
   Line, 
-  AreaChart, 
-  Area, 
   BarChart, 
   Bar,
   XAxis, 
@@ -40,16 +31,13 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar
 } from 'recharts';
-import { formatCurrency, formatPercent } from '@/lib/blockchain/dataProviders';
+import { formatCurrency } from '@/lib/blockchain/dataProviders';
 
 // Mock analytics data
 const performanceData = [
@@ -113,7 +101,7 @@ const portfolioMetrics = {
   profitFactor: 2.34,
 };
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+// const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']; // Unused for now
 
 export default function Analytics() {
   const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y' | 'ALL'>('6M');

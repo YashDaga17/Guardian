@@ -3,27 +3,21 @@
 import { useEffect, useState } from 'react';
 import { 
   TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Zap, 
   Target, 
-  BarChart3,
-  Plus,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  Wallet,
   Brain,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  LineChart, 
-  Line, 
   AreaChart, 
   Area, 
   XAxis, 
@@ -35,8 +29,8 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { usePortfolioStore, useStrategyStore } from '@/store';
-import { formatCurrency, formatPercent } from '@/lib/blockchain/dataProviders';
+import { formatCurrency } from '@/lib/blockchain/dataProviders';
+import { NitroliteStateChannels } from '@/components/nitrolite/NitroliteStateChannels';
 
 // Mock data for charts
 const portfolioData = [
@@ -120,8 +114,6 @@ const aiInsights = [
 ];
 
 export default function Dashboard() {
-  const { performance, assets, transactions } = usePortfolioStore();
-  const { strategies, recommendations } = useStrategyStore();
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | '1y'>('7d');
 
   useEffect(() => {
@@ -138,24 +130,45 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Portfolio Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back! Here&apos;s your portfolio overview.
+            Welcome back! Here&apos;s your portfolio overview with AI-powered insights.
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Quick Trade
-          </Button>
           <Button variant="outline">
-            <Target className="h-4 w-4 mr-2" />
-            New Strategy
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
+          <Button>
+            <TrendingUp className="h-4 w-4 mr-2" />
+            View Analytics
           </Button>
         </div>
       </div>
 
-      {/* Overview Cards */}
+      {/* AI Insights Banner */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="flex items-center justify-between p-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-2 bg-blue-100 rounded-full">
+              <Brain className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-blue-900">AI Portfolio Insight</h3>
+              <p className="text-blue-700">
+                Consider rebalancing: Your ETH allocation is 15% above optimal. 
+                Market sentiment suggests a potential 8% correction incoming.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+            View Details
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Portfolio Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -409,6 +422,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Nitrolite State Channels Section */}
+      <NitroliteStateChannels />
     </div>
   );
 }
