@@ -16,7 +16,7 @@ const config = createConfig({
     walletConnect({ 
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'your-project-id',
     }),
-    coinbaseWallet({ appName: 'Guardian DeFi' }),
+    coinbaseWallet({ appName: 'Tradely DeFi' }),
   ],
   transports: {
     [mainnet.id]: http(),
@@ -29,8 +29,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        staleTime: 5 * 60 * 1000, // Increased to 5 minutes for better caching
         refetchOnWindowFocus: false,
+        refetchOnReconnect: false, // Disable auto-refetch on reconnect
+        retry: 2, // Reduce retry attempts
       },
     },
   }));

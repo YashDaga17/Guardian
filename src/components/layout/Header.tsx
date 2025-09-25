@@ -47,7 +47,7 @@ export function Header() {
           <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">G</span>
           </div>
-          <span className="font-bold text-lg">Guardian</span>
+          <span className="font-bold text-lg">Tradely</span>
         </div>
 
         {/* Search Bar */}

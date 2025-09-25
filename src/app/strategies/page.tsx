@@ -1,37 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { 
   Plus, 
   Play, 
   Pause, 
   Settings, 
-  TrendingUp, 
-  TrendingDown,
   Target,
-  Brain,
-  Zap,
-  Shield,
   BarChart3,
-  Clock,
-  AlertTriangle,
-  CheckCircle,
-  Star,
-  Award,
-  Activity
+  Star
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dialog, 
   DialogContent, 
   DialogDescription, 
   DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+  DialogTitle
 } from '@/components/ui/dialog';
 import { 
   LineChart, 
@@ -40,19 +28,237 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
+  ResponsiveContainer
 } from 'recharts';
-import { formatCurrency, formatPercent } from '@/lib/blockchain/dataProviders';
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// Define proper type for active strategy
+interface ActiveStrategy {
+  id: string;
+  name: string;
+  type: 'custom' | 'defi-yield';
+  status: 'active';
+  allocation: number;
+  currentValue: number;
+  totalReturn: number;
+  dailyChange: number;
+  createdAt: string;
+  riskLevel: number;
+  assets: string[];
+}
+
+// Memoized Active Strategy Card Component
+const ActiveStrategyCard = memo(({ 
+  strategy, 
+  getRiskLevelColor, 
+  getRiskLevelText 
+}: {
+  strategy: ActiveStrategy;
+  getRiskLevelColor: (level: number) => string;
+  getRiskLevelText: (level: number) => string;
+}) => (
+  <Card key={strategy.id}>
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <div>
+          <CardTitle className="text-lg">{strategy.name}</CardTitle>
+          <CardDescription>
+            Active since {new Date(strategy.createdAt).toLocaleDateString()}
+          </CardDescription>
+        </div>
+        <Badge className={getRiskLevelColor(strategy.riskLevel)}>
+          {getRiskLevelText(strategy.riskLevel)}
+        </Badge>
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Current Value</p>
+          <p className="text-lg font-semibold">{formatCurrency(strategy.currentValue)}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Total Return</p>
+          <p className="text-lg font-semibold text-green-600">
+            +{strategy.totalReturn.toFixed(2)}%
+          </p>
+        </div>
+      </div>
+      
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm">24h Change</span>
+          <span className={`text-sm ${strategy.dailyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {strategy.dailyChange >= 0 ? '+' : ''}{strategy.dailyChange.toFixed(2)}%
+          </span>
+        </div>
+        <Progress 
+          value={Math.abs(strategy.dailyChange) * 10} 
+          className={strategy.dailyChange >= 0 ? 'text-green-600' : 'text-red-600'} 
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Button size="sm" variant="outline">
+          <Pause className="h-4 w-4 mr-2" />
+          Pause
+        </Button>
+        <Button size="sm" variant="outline">
+          <Settings className="h-4 w-4 mr-2" />
+          Adjust
+        </Button>
+        <Button size="sm" variant="outline">
+          <BarChart3 className="h-4 w-4 mr-2" />
+          Details
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+));
+
+ActiveStrategyCard.displayName = 'ActiveStrategyCard';
+
+// Define proper type for pre-built strategy
+interface PreBuiltStrategy {
+  id: string;
+  name: string;
+  description: string;
+  type: 'conservative' | 'moderate' | 'aggressive' | 'defi-yield';
+  riskLevel: number;
+  expectedApy: number;
+  minimumInvestment: number;
+  assets: string[];
+  allocation: { [key: string]: number };
+  features: string[];
+  backtestData: {
+    totalReturn: number;
+    sharpeRatio: number;
+    maxDrawdown: number;
+    winRate: number;
+  };
+  isPopular: boolean;
+}
+
+// Memoized Pre-built Strategy Card Component
+const PreBuiltStrategyCard = memo(({ 
+  strategy, 
+  getRiskLevelColor, 
+  getRiskLevelText 
+}: {
+  strategy: PreBuiltStrategy;
+  getRiskLevelColor: (level: number) => string;
+  getRiskLevelText: (level: number) => string;
+}) => (
+  <Card key={strategy.id} className="relative">
+    {strategy.isPopular && (
+      <Badge className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-orange-500">
+        <Star className="h-3 w-3 mr-1" />
+        Popular
+      </Badge>
+    )}
+    
+    <CardHeader>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <CardTitle className="text-lg">{strategy.name}</CardTitle>
+          <CardDescription>{strategy.description}</CardDescription>
+          <div className="flex items-center space-x-4">
+            <Badge className={getRiskLevelColor(strategy.riskLevel)}>
+              {getRiskLevelText(strategy.riskLevel)}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              Expected APY: <span className="font-semibold text-green-600">{strategy.expectedApy}%</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </CardHeader>
+    
+    <CardContent className="space-y-4">
+      {/* Asset Allocation */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Asset Allocation</h4>
+        <div className="space-y-2">
+          {Object.entries(strategy.allocation).map(([asset, percentage]) => (
+            <div key={asset} className="flex items-center justify-between">
+              <span className="text-sm">{asset}</span>
+              <div className="flex items-center space-x-2">
+                <Progress value={Number(percentage)} className="w-20" />
+                <span className="text-sm text-muted-foreground w-8">{percentage}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Backtest Results */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Backtest Performance</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Total Return:</span>
+            <span className="ml-2 font-semibold text-green-600">
+              +{strategy.backtestData.totalReturn}%
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Sharpe Ratio:</span>
+            <span className="ml-2 font-semibold">{strategy.backtestData.sharpeRatio}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Max Drawdown:</span>
+            <span className="ml-2 font-semibold text-red-600">
+              {strategy.backtestData.maxDrawdown}%
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Win Rate:</span>
+            <span className="ml-2 font-semibold">{strategy.backtestData.winRate}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Features */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Key Features</h4>
+        <div className="flex flex-wrap gap-1">
+          {strategy.features.map((feature: string, index: number) => (
+            <Badge key={index} variant="outline" className="text-xs">
+              {feature}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4">
+        <span className="text-sm text-muted-foreground">
+          Min. investment: {formatCurrency(strategy.minimumInvestment)}
+        </span>
+        <div className="space-x-2">
+          <Button variant="outline" size="sm">
+            Learn More
+          </Button>
+          <Button size="sm">
+            <Play className="h-4 w-4 mr-2" />
+            Deploy
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+));
+
+PreBuiltStrategyCard.displayName = 'PreBuiltStrategyCard';
 
 // Pre-built strategies
-const preBuiltStrategies = [
+const preBuiltStrategies: PreBuiltStrategy[] = [
   {
     id: '1',
     name: 'Conservative Growth',
@@ -132,7 +338,7 @@ const preBuiltStrategies = [
 ];
 
 // Active strategies
-const activeStrategies = [
+const activeStrategies: ActiveStrategy[] = [
   {
     id: 'active_1',
     name: 'My Conservative Mix',
@@ -207,27 +413,54 @@ const riskQuestions = [
 ];
 
 export default function Strategies() {
-  const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+  const [_selectedStrategy, _setSelectedStrategy] = useState<string | null>(null);
   const [showRiskAssessment, setShowRiskAssessment] = useState(false);
   const [riskAnswers, setRiskAnswers] = useState<Record<number, number>>({});
   
-  const getRiskLevelColor = (level: number) => {
+  // Memoize color and text calculations to prevent re-renders
+  const getRiskLevelColor = useCallback((level: number) => {
     if (level <= 3) return 'text-green-600 bg-green-100';
     if (level <= 6) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
-  };
+  }, []);
 
-  const getRiskLevelText = (level: number) => {
+  const getRiskLevelText = useCallback((level: number) => {
     if (level <= 3) return 'Low Risk';
     if (level <= 6) return 'Medium Risk';
     return 'High Risk';
-  };
+  }, []);
 
-  const calculateRiskScore = () => {
+  // Memoize risk score calculation
+  const calculateRiskScore = useMemo(() => {
     const total = Object.values(riskAnswers).reduce((sum, score) => sum + score, 0);
     const maxScore = riskQuestions.length * 4;
     return Math.round((total / maxScore) * 10);
-  };
+  }, [riskAnswers]);
+
+  // Memoize sorted strategies to prevent unnecessary re-sorts
+  const sortedPreBuiltStrategies = useMemo(() => {
+    return [...preBuiltStrategies].sort((a, b) => {
+      if (a.isPopular && !b.isPopular) return -1;
+      if (!a.isPopular && b.isPopular) return 1;
+      return a.expectedApy - b.expectedApy;
+    });
+  }, []);
+
+  // Memoize handlers to prevent child re-renders
+  const handleRiskAnswerChange = useCallback((questionId: number, score: number) => {
+    setRiskAnswers(prev => ({
+      ...prev,
+      [questionId]: score
+    }));
+  }, []);
+
+  const handleShowRiskAssessment = useCallback(() => {
+    setShowRiskAssessment(true);
+  }, []);
+
+  const handleCloseRiskAssessment = useCallback(() => {
+    setShowRiskAssessment(false);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -240,7 +473,7 @@ export default function Strategies() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setShowRiskAssessment(true)}>
+          <Button variant="outline" onClick={handleShowRiskAssessment}>
             <Target className="h-4 w-4 mr-2" />
             Risk Assessment
           </Button>
@@ -257,63 +490,12 @@ export default function Strategies() {
           <h2 className="text-xl font-semibold">Your Active Strategies</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activeStrategies.map((strategy) => (
-              <Card key={strategy.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{strategy.name}</CardTitle>
-                      <CardDescription>
-                        Active since {new Date(strategy.createdAt).toLocaleDateString()}
-                      </CardDescription>
-                    </div>
-                    <Badge className={getRiskLevelColor(strategy.riskLevel)}>
-                      {getRiskLevelText(strategy.riskLevel)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Current Value</p>
-                      <p className="text-lg font-semibold">{formatCurrency(strategy.currentValue)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Return</p>
-                      <p className="text-lg font-semibold text-green-600">
-                        +{strategy.totalReturn.toFixed(2)}%
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">24h Change</span>
-                      <span className={`text-sm ${strategy.dailyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {strategy.dailyChange >= 0 ? '+' : ''}{strategy.dailyChange.toFixed(2)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={Math.abs(strategy.dailyChange) * 10} 
-                      className={strategy.dailyChange >= 0 ? 'text-green-600' : 'text-red-600'} 
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Button size="sm" variant="outline">
-                      <Pause className="h-4 w-4 mr-2" />
-                      Pause
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Adjust
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <ActiveStrategyCard
+                key={strategy.id}
+                strategy={strategy}
+                getRiskLevelColor={getRiskLevelColor}
+                getRiskLevelText={getRiskLevelText}
+              />
             ))}
           </div>
         </div>
@@ -348,110 +530,19 @@ export default function Strategies() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Pre-built Strategies</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {preBuiltStrategies.map((strategy) => (
-            <Card key={strategy.id} className="relative">
-              {strategy.isPopular && (
-                <Badge className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-orange-500">
-                  <Star className="h-3 w-3 mr-1" />
-                  Popular
-                </Badge>
-              )}
-              
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <CardTitle className="text-lg">{strategy.name}</CardTitle>
-                    <CardDescription>{strategy.description}</CardDescription>
-                    <div className="flex items-center space-x-4">
-                      <Badge className={getRiskLevelColor(strategy.riskLevel)}>
-                        {getRiskLevelText(strategy.riskLevel)}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Expected APY: <span className="font-semibold text-green-600">{strategy.expectedApy}%</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Asset Allocation */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Asset Allocation</h4>
-                  <div className="space-y-2">
-                    {Object.entries(strategy.allocation).map(([asset, percentage]) => (
-                      <div key={asset} className="flex items-center justify-between">
-                        <span className="text-sm">{asset}</span>
-                        <div className="flex items-center space-x-2">
-                          <Progress value={percentage} className="w-20" />
-                          <span className="text-sm text-muted-foreground w-8">{percentage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Backtest Results */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Backtest Performance</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Total Return:</span>
-                      <span className="ml-2 font-semibold text-green-600">
-                        +{strategy.backtestData.totalReturn}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Sharpe Ratio:</span>
-                      <span className="ml-2 font-semibold">{strategy.backtestData.sharpeRatio}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Max Drawdown:</span>
-                      <span className="ml-2 font-semibold text-red-600">
-                        {strategy.backtestData.maxDrawdown}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Win Rate:</span>
-                      <span className="ml-2 font-semibold">{strategy.backtestData.winRate}%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Key Features</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {strategy.features.map((feature, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {feature}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4">
-                  <span className="text-sm text-muted-foreground">
-                    Min. investment: {formatCurrency(strategy.minimumInvestment)}
-                  </span>
-                  <div className="space-x-2">
-                    <Button variant="outline" size="sm">
-                      Learn More
-                    </Button>
-                    <Button size="sm">
-                      <Play className="h-4 w-4 mr-2" />
-                      Deploy
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {sortedPreBuiltStrategies.map((strategy) => (
+            <PreBuiltStrategyCard
+              key={strategy.id}
+              strategy={strategy}
+              getRiskLevelColor={getRiskLevelColor}
+              getRiskLevelText={getRiskLevelText}
+            />
           ))}
         </div>
       </div>
 
       {/* Risk Assessment Modal */}
-      <Dialog open={showRiskAssessment} onOpenChange={setShowRiskAssessment}>
+      <Dialog open={showRiskAssessment} onOpenChange={handleCloseRiskAssessment}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Risk Tolerance Assessment</DialogTitle>
@@ -471,10 +562,7 @@ export default function Strategies() {
                         type="radio"
                         name={`question_${question.id}`}
                         value={option.score}
-                        onChange={(e) => setRiskAnswers(prev => ({
-                          ...prev,
-                          [question.id]: parseInt(e.target.value)
-                        }))}
+                        onChange={(e) => handleRiskAnswerChange(question.id, parseInt(e.target.value))}
                         className="text-primary"
                       />
                       <span className="text-sm">{option.text}</span>
@@ -486,19 +574,19 @@ export default function Strategies() {
             
             {Object.keys(riskAnswers).length === riskQuestions.length && (
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Your Risk Score: {calculateRiskScore()}/10</h4>
+                <h4 className="font-medium mb-2">Your Risk Score: {calculateRiskScore}/10</h4>
                 <p className="text-sm text-muted-foreground">
-                  Based on your answers, we recommend {calculateRiskScore() <= 3 ? 'Conservative' : calculateRiskScore() <= 7 ? 'Moderate' : 'Aggressive'} strategies.
+                  Based on your answers, we recommend {calculateRiskScore <= 3 ? 'Conservative' : calculateRiskScore <= 7 ? 'Moderate' : 'Aggressive'} strategies.
                 </p>
               </div>
             )}
             
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowRiskAssessment(false)}>
+              <Button variant="outline" onClick={handleCloseRiskAssessment}>
                 Cancel
               </Button>
               <Button 
-                onClick={() => setShowRiskAssessment(false)}
+                onClick={handleCloseRiskAssessment}
                 disabled={Object.keys(riskAnswers).length !== riskQuestions.length}
               >
                 Get Recommendations

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Guardian DeFi Portfolio Management - Deployment Script
+# Tradely DeFi Portfolio Management - Deployment Script
 # This script helps you deploy the application to various platforms
 
-echo "🛡️  Guardian DeFi Portfolio Management - Deployment Helper"
+echo "🛡️  Tradely DeFi Portfolio Management - Deployment Helper"
 echo "=================================================="
 
 # Check if we're in the right directory
@@ -87,10 +87,10 @@ EOF
     fi
     
     # Build Docker image
-    docker build -t guardian-defi .
+    docker build -t tradely-defi .
     
     echo "✅ Docker image built successfully!"
-    echo "🚀 To run the container: docker run -p 3000:3000 guardian-defi"
+    echo "🚀 To run the container: docker run -p 3000:3000 tradely-defi"
 }
 
 # Function to create a production build
@@ -139,7 +139,7 @@ case $choice in
 esac
 
 echo ""
-echo "🎉 Done! Your Guardian DeFi Portfolio Management app is ready!"
+echo "🎉 Done! Your Tradely DeFi Portfolio Management app is ready!"
 echo ""
 echo "📝 Don't forget to:"
 echo "   • Set up your WalletConnect Project ID in .env.local"

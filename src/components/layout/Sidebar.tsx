@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -12,13 +12,17 @@ import {
   Settings, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Brain,
+  Eye,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/store';
+import { PortfolioContextService } from '@/lib/ai/portfolioContext';
 
 const navigation = [
   {
@@ -47,10 +51,31 @@ const navigation = [
     description: 'Market data & trading',
   },
   {
+    name: 'Market Intelligence',
+    href: '/market-intelligence',
+    icon: Eye,
+    description: 'Multi-asset watchlists & alerts',
+    badge: 'NEW',
+  },
+  {
     name: 'Analytics',
     href: '/analytics',
     icon: BarChart3,
     description: 'Performance insights',
+  },
+  {
+    name: 'AI Analytics',
+    href: '/ai-analytics',
+    icon: Brain,
+    description: 'AI-powered insights',
+    badge: 'AI',
+  },
+  {
+    name: 'Yellow Network',
+    href: '/yellow-network',
+    icon: Zap,
+    description: 'Nitrolite state channels',
+    badge: 'TESTNET',
   },
 ];
 
@@ -67,6 +92,31 @@ export function Sidebar() {
   const pathname = usePathname();
   const { sidebarOpen, setSidebarOpen, isMobile } = useUIStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [portfolioData, setPortfolioData] = useState<{
+    totalValue: number;
+    changePercent: number;
+  } | null>(null);
+
+  // Load real portfolio data
+  useEffect(() => {
+    const loadPortfolioData = async () => {
+      try {
+        const portfolio = await PortfolioContextService.getPortfolioSummary();
+        setPortfolioData({
+          totalValue: portfolio.totalValueUSD,
+          changePercent: portfolio.totalChangePercent
+        });
+      } catch (error) {
+        console.error('Error loading portfolio data:', error);
+      }
+    };
+
+    loadPortfolioData();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(loadPortfolioData, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -100,7 +150,7 @@ export function Sidebar() {
                 <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">G</span>
                 </div>
-                <span className="font-bold text-lg">Guardian</span>
+                <span className="font-bold text-lg">Tradely</span>
                 <Badge variant="secondary" className="ml-auto text-xs">
                   Beta
                 </Badge>
@@ -192,8 +242,21 @@ export function Sidebar() {
           {!collapsed && (
             <div className="bg-muted/50 rounded-lg p-3 mb-4">
               <div className="text-xs text-muted-foreground mb-1">Total Portfolio</div>
-              <div className="text-lg font-semibold">$125,432.50</div>
-              <div className="text-xs text-green-600">+2.4% (24h)</div>
+              {portfolioData ? (
+                <>
+                  <div className="text-lg font-semibold">
+                    ${portfolioData.totalValue.toLocaleString()}
+                  </div>
+                  <div className={`text-xs ${portfolioData.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {portfolioData.changePercent >= 0 ? '+' : ''}{portfolioData.changePercent.toFixed(2)}% (24h)
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-semibold">Loading...</div>
+                  <div className="text-xs text-muted-foreground">Fetching prices</div>
+                </>
+              )}
             </div>
           )}
 

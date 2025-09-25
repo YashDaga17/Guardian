@@ -3,19 +3,41 @@
   "env": {
     "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "your-project-id",
     "NEXT_PUBLIC_ALCHEMY_API_KEY": "your-alchemy-key",
-    "NEXT_PUBLIC_ETHEREUM_RPC_URL": "https://eth-mainnet.alchemyapi.io/v2/your-api-key",
-    "NEXT_PUBLIC_POLYGON_RPC_URL": "https://polygon-mainnet.alchemyapi.io/v2/your-api-key",
-    "NEXT_PUBLIC_ARBITRUM_RPC_URL": "https://arb-mainnet.alchemyapi.io/v2/your-api-key",
-    "NEXT_PUBLIC_COINAPI_KEY": "your-coinapi-key"
+    "NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY": "your-alpha-vantage-key",
+    "NEXT_PUBLIC_GEMINI_API_KEY": "your-gemini-api-key",
+    "DATABASE_URL": "your-neon-database-url",
+    "DIRECT_URL": "your-neon-direct-url",
+    "NEXT_PUBLIC_ETHEREUM_RPC_URL": "https://eth-sepolia.g.alchemy.com/v2/your-api-key",
+    "NEXT_PUBLIC_POLYGON_RPC_URL": "https://polygon-mumbai.g.alchemy.com/v2/your-api-key",
+    "NEXT_PUBLIC_ARBITRUM_RPC_URL": "https://arbitrum-sepolia.g.alchemy.com/v2/your-api-key",
+    "NEXT_PUBLIC_BASE_RPC_URL": "https://base-sepolia.g.alchemy.com/v2/your-api-key",
+    "NEXT_PUBLIC_COINAPI_KEY": "your-coinapi-key",
+    "NEXT_PUBLIC_CLEARNODE_URL": "wss://clearnet-sandbox.yellow.com/ws",
+    "NEXT_PUBLIC_YELLOW_FAUCET_URL": "https://clearnet-sandbox.yellow.com/faucet/requestTokens",
+    "NEXT_PUBLIC_YELLOW_API_URL": "https://clearnet-sandbox.yellow.com",
+    "NEXT_PUBLIC_ENABLE_CLEARNODE": "true",
+    "NEXT_PUBLIC_USE_TESTNET": "true",
+    "NEXT_PUBLIC_ENABLE_REAL_TRANSACTIONS": "true"
   },
   "build": {
     "env": {
       "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "your-project-id",
       "NEXT_PUBLIC_ALCHEMY_API_KEY": "your-alchemy-key",
-      "NEXT_PUBLIC_ETHEREUM_RPC_URL": "https://eth-mainnet.alchemyapi.io/v2/your-api-key",
-      "NEXT_PUBLIC_POLYGON_RPC_URL": "https://polygon-mainnet.alchemyapi.io/v2/your-api-key",
-      "NEXT_PUBLIC_ARBITRUM_RPC_URL": "https://arb-mainnet.alchemyapi.io/v2/your-api-key",
-      "NEXT_PUBLIC_COINAPI_KEY": "your-coinapi-key"
+      "NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY": "your-alpha-vantage-key",
+      "NEXT_PUBLIC_GEMINI_API_KEY": "your-gemini-api-key",
+      "DATABASE_URL": "your-neon-database-url",
+      "DIRECT_URL": "your-neon-direct-url",
+      "NEXT_PUBLIC_ETHEREUM_RPC_URL": "https://eth-sepolia.g.alchemy.com/v2/your-api-key",
+      "NEXT_PUBLIC_POLYGON_RPC_URL": "https://polygon-mumbai.g.alchemy.com/v2/your-api-key",
+      "NEXT_PUBLIC_ARBITRUM_RPC_URL": "https://arbitrum-sepolia.g.alchemy.com/v2/your-api-key",
+      "NEXT_PUBLIC_BASE_RPC_URL": "https://base-sepolia.g.alchemy.com/v2/your-api-key",
+      "NEXT_PUBLIC_COINAPI_KEY": "your-coinapi-key",
+      "NEXT_PUBLIC_CLEARNODE_URL": "wss://clearnet-sandbox.yellow.com/ws",
+      "NEXT_PUBLIC_YELLOW_FAUCET_URL": "https://clearnet-sandbox.yellow.com/faucet/requestTokens",
+      "NEXT_PUBLIC_YELLOW_API_URL": "https://clearnet-sandbox.yellow.com",
+      "NEXT_PUBLIC_ENABLE_CLEARNODE": "true",
+      "NEXT_PUBLIC_USE_TESTNET": "true",
+      "NEXT_PUBLIC_ENABLE_REAL_TRANSACTIONS": "true"
     }
   },
   "functions": {

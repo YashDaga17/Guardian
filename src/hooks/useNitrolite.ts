@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { getNitroliteService, type GuardianNitroliteService, type AppSession } from '@/lib/blockchain/nitroliteService';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getNitroliteService, type GuardianNitroliteService } from '@/lib/blockchain/nitroliteService';
 
 interface NitroliteHookReturn {
   isInitialized: boolean;
@@ -30,7 +30,9 @@ interface NitroliteHookReturn {
     participant: string;
     asset: string;
     amount: string;
-  }>) => Promise<AppSession>;
+  }>) => Promise<string>;
+  fetchChannels: () => Promise<unknown[]>;
+  fetchAppSessions: () => Promise<unknown[]>;
   closeChannel: (channelId: string) => Promise<string>;
   optimizeGas: (swapParams: {
     fromToken: string;
@@ -57,6 +59,7 @@ interface NitroliteHookReturn {
  */
 export function useNitrolite(): NitroliteHookReturn {
   const [service, setService] = useState<GuardianNitroliteService | null>(null);
+  const serviceRef = useRef<GuardianNitroliteService | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export function useNitrolite(): NitroliteHookReturn {
         const nitroliteService = getNitroliteService({
           rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth-mainnet.alchemyapi.io/v2/demo',
           chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1'),
-          privateKey: process.env.NITROLITE_PRIVATE_KEY || '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+          privateKey: process.env.NITROLITE_PRIVATE_KEY,
           address: process.env.NEXT_PUBLIC_WALLET_ADDRESS,
           clearNodeUrl: process.env.NEXT_PUBLIC_CLEARNODE_URL || 'wss://clearnet.yellow.com/ws',
           enableClearNode: process.env.NEXT_PUBLIC_ENABLE_CLEARNODE !== 'false',
@@ -93,6 +96,7 @@ export function useNitrolite(): NitroliteHookReturn {
 
         await nitroliteService.initialize();
         setService(nitroliteService);
+        serviceRef.current = nitroliteService;
         setIsInitialized(true);
         setIsClearNodeConnected(nitroliteService.isClearNodeReady());
         setSupportedNetworks(nitroliteService.getSupportedNetworks());
@@ -113,8 +117,8 @@ export function useNitrolite(): NitroliteHookReturn {
 
     // Cleanup on unmount
     return () => {
-      if (service) {
-        service.cleanup().catch(console.error);
+      if (serviceRef.current) {
+        serviceRef.current.cleanup().catch(console.error);
       }
     };
   }, []); // Empty dependency array to run only once
@@ -176,6 +180,36 @@ export function useNitrolite(): NitroliteHookReturn {
     }
   }, [service, isInitialized, refreshData]);
 
+  const fetchChannels = useCallback(async () => {
+    if (!service || !isInitialized) {
+      throw new Error('Nitrolite service not initialized');
+    }
+
+    try {
+      const channels = await service.fetchChannels();
+      return channels;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch channels';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [service, isInitialized]);
+
+  const fetchAppSessions = useCallback(async () => {
+    if (!service || !isInitialized) {
+      throw new Error('Nitrolite service not initialized');
+    }
+
+    try {
+      const sessions = await service.fetchAppSessions();
+      return sessions;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch app sessions';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [service, isInitialized]);
+
   const createAppSession = useCallback(async (participants: string[], allocations: Array<{
     participant: string;
     asset: string;
@@ -187,12 +221,12 @@ export function useNitrolite(): NitroliteHookReturn {
 
     try {
       setIsLoading(true);
-      const session = await service.createApplicationSession(participants, allocations);
+      const sessionId = await service.createApplicationSession(participants, allocations);
       
       // Refresh data after session creation
       await refreshData();
       
-      return session;
+      return sessionId;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create app session';
       setError(errorMessage);
@@ -281,6 +315,8 @@ export function useNitrolite(): NitroliteHookReturn {
     serviceStats,
     createChannel,
     createAppSession,
+    fetchChannels,
+    fetchAppSessions,
     closeChannel,
     optimizeGas,
     executeBatch,

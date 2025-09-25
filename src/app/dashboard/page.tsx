@@ -29,101 +29,37 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { formatCurrency } from '@/lib/blockchain/dataProviders';
 import { NitroliteStateChannels } from '@/components/nitrolite/NitroliteStateChannels';
-
-// Mock data for charts
-const portfolioData = [
-  { date: '2024-01-01', value: 100000 },
-  { date: '2024-01-08', value: 105000 },
-  { date: '2024-01-15', value: 102000 },
-  { date: '2024-01-22', value: 108000 },
-  { date: '2024-01-29', value: 115000 },
-  { date: '2024-02-05', value: 118000 },
-  { date: '2024-02-12', value: 125432 },
-];
-
-const allocationData = [
-  { name: 'ETH', value: 45, color: '#627EEA' },
-  { name: 'BTC', value: 25, color: '#F7931A' },
-  { name: 'USDC', value: 15, color: '#2775CA' },
-  { name: 'LINK', value: 10, color: '#375BD2' },
-  { name: 'Other', value: 5, color: '#8B5CF6' },
-];
-
-const recentTransactions = [
-  {
-    id: '1',
-    type: 'buy' as const,
-    asset: 'ETH',
-    amount: '2.5',
-    value: '$8,000',
-    timestamp: Date.now() - 3600000,
-    status: 'confirmed' as const,
-    batchId: 'batch_001',
-  },
-  {
-    id: '2',
-    type: 'swap' as const,
-    asset: 'USDC → LINK',
-    amount: '500',
-    value: '$500',
-    timestamp: Date.now() - 7200000,
-    status: 'confirmed' as const,
-  },
-  {
-    id: '3',
-    type: 'sell' as const,
-    asset: 'BTC',
-    amount: '0.1',
-    value: '$4,200',
-    timestamp: Date.now() - 10800000,
-    status: 'pending' as const,
-    batchId: 'batch_002',
-  },
-];
-
-const aiInsights = [
-  {
-    id: '1',
-    type: 'rebalance' as const,
-    title: 'Portfolio Rebalancing Opportunity',
-    description: 'Consider reducing ETH allocation by 5% and increasing DeFi exposure',
-    confidence: 85,
-    expectedReturn: 12.5,
-    timeframe: '3-6 months',
-  },
-  {
-    id: '2',
-    type: 'yield-opportunity' as const,
-    title: 'High Yield Opportunity Detected',
-    description: 'Aave USDC lending shows 6.2% APY with low risk profile',
-    confidence: 92,
-    expectedReturn: 6.2,
-    timeframe: '1-3 months',
-  },
-  {
-    id: '3',
-    type: 'buy' as const,
-    title: 'Market Entry Signal',
-    description: 'Technical indicators suggest good entry point for LINK',
-    confidence: 78,
-    expectedReturn: 18.3,
-    timeframe: '2-4 weeks',
-  },
-];
+// import { TestnetTransactionPanel } from '@/components/testnet/TestnetTransactionPanel'; // Disabled for production
+import AIAssistant from '@/components/ai/AIAssistant';
+import { useDashboardStore, formatCurrency } from '@/store/dashboardStore';
+import { TransactionItem } from '@/components/dashboard/TransactionItem';
 
 export default function Dashboard() {
-  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | '1y'>('7d');
+  // Zustand store selectors - memoized to prevent unnecessary re-renders
+  const {
+    portfolioData,
+    allocationData,
+    totalValue,
+    dailyChange,
+    dailyChangeValue,
+    recentTransactions,
+    aiInsights,
+    timeframe,
+    isClient,
+    setTimeframe,
+    initializeClientData,
+  } = useDashboardStore();
 
+  // AI Assistant state
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+
+  // Initialize client-side data only once
   useEffect(() => {
-    // Load initial data
-    // This would typically fetch from your API
-  }, []);
-
-  const totalValue = 125432.50;
-  const dailyChange = 2.4;
-  const dailyChangeValue = 2845.30;
+    if (!isClient) {
+      initializeClientData();
+    }
+  }, [isClient, initializeClientData]);
 
   return (
     <div className="space-y-6">
@@ -144,25 +80,32 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 mr-2" />
             View Analytics
           </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setIsAIAssistantOpen(true)}
+          >
+            <Brain className="h-4 w-4 mr-2" />
+            AI Assistant
+          </Button>
         </div>
       </div>
 
       {/* AI Insights Banner */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className="border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-950/30">
         <CardContent className="flex items-center justify-between p-6">
           <div className="flex items-center space-x-4">
-            <div className="p-2 bg-blue-100 rounded-full">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
               <Brain className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-blue-900">AI Portfolio Insight</h3>
-              <p className="text-blue-700">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100">AI Portfolio Insight</h3>
+              <p className="text-blue-700 dark:text-blue-300">
                 Consider rebalancing: Your ETH allocation is 15% above optimal. 
                 Market sentiment suggests a potential 8% correction incoming.
               </p>
             </div>
           </div>
-          <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+          <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300">
             View Details
           </Button>
         </CardContent>
@@ -382,49 +325,42 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-0">
               {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${
-                      tx.type === 'buy' ? 'bg-green-100 text-green-600' :
-                      tx.type === 'sell' ? 'bg-red-100 text-red-600' :
-                      'bg-blue-100 text-blue-600'
-                    }`}>
-                      {tx.type === 'buy' ? <ArrowUpRight className="h-4 w-4" /> :
-                       tx.type === 'sell' ? <ArrowDownRight className="h-4 w-4" /> :
-                       <ArrowUpRight className="h-4 w-4 rotate-90" />}
-                    </div>
-                    <div>
-                      <div className="font-medium capitalize">{tx.type} {tx.asset}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {tx.amount} • {new Date(tx.timestamp).toLocaleTimeString()}
-                        {tx.batchId && (
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            Batched
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">{tx.value}</div>
-                    <Badge 
-                      variant={tx.status === 'confirmed' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {tx.status}
-                    </Badge>
-                  </div>
-                </div>
+                <TransactionItem
+                  key={tx.id}
+                  transaction={tx}
+                  isClient={isClient}
+                />
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Testnet Transaction Panel - Disabled for Production */}
+      {process.env.NEXT_PUBLIC_USE_TESTNET === 'true' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Development Mode</h2>
+              <p className="text-muted-foreground">
+                Testnet features are disabled in production. Connect your wallet to use real transactions.
+              </p>
+            </div>
+          </div>
+          {/* <TestnetTransactionPanel /> */}
+        </div>
+      )}
+
       {/* Nitrolite State Channels Section */}
       <NitroliteStateChannels />
+
+      {/* AI Assistant */}
+      <AIAssistant 
+        isOpen={isAIAssistantOpen} 
+        onToggle={() => setIsAIAssistantOpen(!isAIAssistantOpen)} 
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { 
   ArrowUpDown, 
   Settings, 
@@ -616,3 +616,6 @@ export function TradingPanel() {
     </div>
   );
 }
+
+// Export memoized component for performance
+export default memo(TradingPanel);

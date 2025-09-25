@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Guardian DeFi Portfolio Management - Development Helper
+# Tradely DeFi Portfolio Management - Development Helper
 # This script helps you set up and run the development environment
 
-echo "🛡️  Guardian DeFi Portfolio Management - Development Setup"
+echo "🛡️  Tradely DeFi Portfolio Management - Development Setup"
 echo "========================================================="
 
 # Check if Node.js is installed

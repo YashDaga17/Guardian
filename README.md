@@ -1,4 +1,4 @@
-# Guardian - Professional DeFi Portfolio Management
+# Tradely - Professional DeFi Portfolio Management
 
 🛡️ A comprehensive, professional-grade DeFi portfolio management application built with Next.js, featuring advanced analytics, multi-wallet support, and intelligent trading capabilities.
 
@@ -55,7 +55,7 @@
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd Guardian
+cd Tradely
 ```
 
 2. **Install dependencies**
@@ -214,8 +214,8 @@ vercel --prod
 
 #### Docker
 ```bash
-docker build -t guardian-defi .
-docker run -p 3000:3000 guardian-defi
+docker build -t tradely-defi .
+docker run -p 3000:3000 tradely-defi
 ```
 
 #### Self-hosted
@@ -261,8 +261,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email support@guardian-defi.com or join our Discord community.
+For support, email support@tradely-defi.com or join our Discord community.
 
 ---
 
-Built with ❤️ by the Guardian team
+Built with ❤️ by the Tradely team

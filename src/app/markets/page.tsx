@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
   Search, 
   Filter, 
   Star,
-  ExternalLink,
   BarChart3,
   Volume2,
-  Clock,
-  DollarSign
+  DollarSign,
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
   TableBody, 
@@ -29,150 +29,216 @@ import {
 import { 
   LineChart, 
   Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
 import { TradingPanel } from '@/components/trading/TradingPanel';
-import { formatCurrency, formatPercent } from '@/lib/blockchain/dataProviders';
+import { useRealMarketData } from '@/hooks/useRealMarketData';
 
-// Mock market data
-const marketData = [
-  {
-    id: '1',
-    symbol: 'ETH',
-    name: 'Ethereum',
-    price: 3200.15,
-    change24h: 2.4,
-    volume24h: 15000000000,
-    marketCap: 385000000000,
-    logo: '⟠',
-    isWatchlisted: true,
-    sparklineData: Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      price: 3200 + Math.sin(i / 4) * 100 + Math.random() * 50 - 25
-    }))
-  },
-  {
-    id: '2',
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    price: 47150.50,
-    change24h: -1.2,
-    volume24h: 25000000000,
-    marketCap: 925000000000,
-    logo: '₿',
-    isWatchlisted: true,
-    sparklineData: Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      price: 47000 + Math.sin(i / 3) * 800 + Math.random() * 200 - 100
-    }))
-  },
-  {
-    id: '3',
-    symbol: 'USDC',
-    name: 'USD Coin',
-    price: 1.001,
-    change24h: 0.01,
-    volume24h: 5000000000,
-    marketCap: 25000000000,
-    logo: '💵',
-    isWatchlisted: false,
-    sparklineData: Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      price: 1.0 + Math.random() * 0.004 - 0.002
-    }))
-  },
-  {
-    id: '4',
-    symbol: 'LINK',
-    name: 'Chainlink',
-    price: 15.50,
-    change24h: 5.2,
-    volume24h: 800000000,
-    marketCap: 9000000000,
-    logo: '🔗',
-    isWatchlisted: false,
-    sparklineData: Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      price: 15.5 + Math.sin(i / 2) * 2 + Math.random() * 1 - 0.5
-    }))
-  },
-  {
-    id: '5',
-    symbol: 'UNI',
-    name: 'Uniswap',
-    price: 6.30,
-    change24h: -3.1,
-    volume24h: 400000000,
-    marketCap: 4700000000,
-    logo: '🦄',
-    isWatchlisted: true,
-    sparklineData: Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      price: 6.3 + Math.sin(i / 5) * 0.8 + Math.random() * 0.3 - 0.15
-    }))
-  },
-];
+// Popular cryptocurrencies to track
+const TRACKED_SYMBOLS = ['BTC', 'ETH', 'USDC', 'LINK', 'UNI', 'AAVE', 'COMP', 'CRV'];
 
-const topGainers = [
-  { symbol: 'LINK', change: 5.2, price: 15.50 },
-  { symbol: 'ETH', change: 2.4, price: 3200.15 },
-  { symbol: 'USDC', change: 0.01, price: 1.001 },
-];
+// Helper functions
+const getTokenLogo = (symbol: string): string => {
+  const logos: Record<string, string> = {
+    'BTC': '₿',
+    'ETH': '⟠', 
+    'USDC': '💵',
+    'USDT': '💲',
+    'LINK': '🔗',
+    'UNI': '🦄',
+    'AAVE': '👻',
+    'COMP': '🏛️',
+    'CRV': '🌀',
+    'SOL': '☀️',
+    'ADA': '🔷',
+    'DOT': '⚪',
+    'MATIC': '🟣',
+    'AVAX': '🔺'
+  };
+  return logos[symbol] || '🪙';
+};
 
-const topLosers = [
-  { symbol: 'UNI', change: -3.1, price: 6.30 },
-  { symbol: 'BTC', change: -1.2, price: 47150.50 },
-];
-
-const marketStats = {
-  totalMarketCap: 1350000000000,
-  totalVolume24h: 45000000000,
-  btcDominance: 42.5,
-  fearGreedIndex: 73,
+const generateSparklineData = (currentPrice: number, changePercent: number) => {
+  // Generate 24 data points for sparkline chart
+  return Array.from({ length: 24 }, (_, i) => {
+    const variance = (Math.random() - 0.5) * 0.02; // ±2% random variance
+    const trend = (changePercent / 100) * (i / 24); // Apply overall trend
+    const price = currentPrice * (1 - trend + variance);
+    return {
+      time: i,
+      price: Math.max(price, 0.01)
+    };
+  });
 };
 
 export default function Markets() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'marketCap' | 'price' | 'change24h' | 'volume24h'>('marketCap');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'marketCap' | 'price' | 'changePercent24h' | 'volume24h'>('marketCap');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [watchlist, setWatchlist] = useState<Set<string>>(
-    new Set(marketData.filter(token => token.isWatchlisted).map(token => token.id))
-  );
+  const [watchlist, setWatchlist] = useState<Set<string>>(new Set(['BTC', 'ETH', 'LINK']));
 
-  const filteredData = marketData.filter(token =>
-    token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Debounce search query to reduce filtering calculations
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms debounce
 
-  const sortedData = [...filteredData].sort((a, b) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    const modifier = sortOrder === 'asc' ? 1 : -1;
-    return (aValue < bValue ? -1 : aValue > bValue ? 1 : 0) * modifier;
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Use real market data with more conservative refresh
+  const { 
+    data: marketData, 
+    loading, 
+    error, 
+    lastUpdate, 
+    refresh, 
+    isStale 
+  } = useRealMarketData({
+    symbols: TRACKED_SYMBOLS,
+    refreshInterval: 180000, // 3 minutes - reasonable interval
+    autoRefresh: true // Re-enabled for real-time data
   });
 
-  const toggleWatchlist = (id: string) => {
-    const newWatchlist = new Set(watchlist);
-    if (newWatchlist.has(id)) {
-      newWatchlist.delete(id);
-    } else {
-      newWatchlist.add(id);
-    }
-    setWatchlist(newWatchlist);
-  };
+  // Memoize filtered and sorted data to prevent unnecessary re-renders
+  const processedData = useMemo(() => {
+    if (!marketData.length) return [];
 
-  const handleSort = (column: typeof sortBy) => {
+    // Add sparkline data (mock data for chart)
+    const dataWithSparklines = marketData.map(token => ({
+      ...token,
+      id: token.symbol.toLowerCase(),
+      logo: getTokenLogo(token.symbol),
+      isWatchlisted: watchlist.has(token.symbol),
+      sparklineData: generateSparklineData(token.price, token.changePercent24h)
+    }));
+
+    // Filter by debounced search query
+    const filtered = dataWithSparklines.filter(token =>
+      token.symbol.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      token.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+
+    // Sort data
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: number, bValue: number;
+      
+      switch (sortBy) {
+        case 'price':
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case 'changePercent24h':
+          aValue = a.changePercent24h;
+          bValue = b.changePercent24h;
+          break;
+        case 'volume24h':
+          aValue = a.volume24h;
+          bValue = b.volume24h;
+          break;
+        default: // marketCap
+          aValue = a.marketCap;
+          bValue = b.marketCap;
+      }
+      
+      const modifier = sortOrder === 'asc' ? 1 : -1;
+      return (aValue < bValue ? -1 : aValue > bValue ? 1 : 0) * modifier;
+    });
+
+    return sorted;
+  }, [marketData, debouncedSearchQuery, sortBy, sortOrder, watchlist]); // Use debounced search
+
+  // Calculate market stats from real data
+  const marketStats = useMemo(() => {
+    if (!marketData.length) {
+      return {
+        totalMarketCap: 0,
+        totalVolume24h: 0,
+        btcDominance: 0,
+        fearGreedIndex: 50
+      };
+    }
+
+    const totalMarketCap = marketData.reduce((sum, token) => sum + token.marketCap, 0);
+    const totalVolume24h = marketData.reduce((sum, token) => sum + token.volume24h, 0);
+    
+    const btcData = marketData.find(token => token.symbol === 'BTC');
+    const btcDominance = btcData ? (btcData.marketCap / totalMarketCap) * 100 : 0;
+    
+    // Simple fear & greed calculation based on average price change
+    const avgChange = marketData.reduce((sum, token) => sum + token.changePercent24h, 0) / marketData.length;
+    const fearGreedIndex = Math.max(0, Math.min(100, 50 + avgChange * 5));
+
+    return {
+      totalMarketCap,
+      totalVolume24h,
+      btcDominance,
+      fearGreedIndex
+    };
+  }, [marketData]);
+
+  // Get top gainers and losers
+  const { topGainers, topLosers } = useMemo(() => {
+    const sorted = [...marketData].sort((a, b) => b.changePercent24h - a.changePercent24h);
+    return {
+      topGainers: sorted.slice(0, 3).map(token => ({
+        symbol: token.symbol,
+        change: token.changePercent24h,
+        price: token.price
+      })),
+      topLosers: sorted.slice(-3).reverse().map(token => ({
+        symbol: token.symbol,
+        change: token.changePercent24h,
+        price: token.price
+      }))
+    };
+  }, [marketData]);
+
+  // Memoized handlers
+  const handleSort = useCallback((column: typeof sortBy) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(column);
       setSortOrder('desc');
     }
-  };
+  }, [sortBy, sortOrder]);
+
+  const toggleWatchlist = useCallback((symbol: string) => {
+    setWatchlist(prev => {
+      const newWatchlist = new Set(prev);
+      if (newWatchlist.has(symbol)) {
+        newWatchlist.delete(symbol);
+      } else {
+        newWatchlist.add(symbol);
+      }
+      return newWatchlist;
+    });
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    refresh();
+  }, [refresh]);
+
+  // Format currency helper
+  const formatCurrency = useCallback((value: number): string => {
+    if (value >= 1) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    } else {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 6
+      }).format(value);
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -180,8 +246,20 @@ export default function Markets() {
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Markets</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground flex items-center gap-2">
             Real-time market data and trading interface
+            {loading ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : isStale ? (
+              <WifiOff className="h-4 w-4 text-amber-500" />
+            ) : (
+              <Wifi className="h-4 w-4 text-green-500" />
+            )}
+            {lastUpdate && (
+              <span className="text-xs">
+                Updated {new Date(lastUpdate).toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -194,12 +272,31 @@ export default function Markets() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
         </div>
       </div>
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-700">
+              <WifiOff className="h-4 w-4" />
+              <span>Failed to load market data: {error}</span>
+              <Button variant="outline" size="sm" onClick={handleRefresh} className="ml-auto">
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Market Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -209,9 +306,11 @@ export default function Markets() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(marketStats.totalMarketCap / 1e12)}T</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(marketStats.totalMarketCap / 1e12)}T
+            </div>
             <p className="text-xs text-muted-foreground">
-              +2.3% from yesterday
+              Total market capitalization
             </p>
           </CardContent>
         </Card>
@@ -222,9 +321,11 @@ export default function Markets() {
             <Volume2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(marketStats.totalVolume24h / 1e9)}B</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(marketStats.totalVolume24h / 1e9)}B
+            </div>
             <p className="text-xs text-muted-foreground">
-              -5.2% from yesterday
+              24-hour trading volume
             </p>
           </CardContent>
         </Card>
@@ -235,9 +336,9 @@ export default function Markets() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{marketStats.btcDominance}%</div>
+            <div className="text-2xl font-bold">{marketStats.btcDominance.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              +0.8% this week
+              Bitcoin market dominance
             </p>
           </CardContent>
         </Card>
@@ -248,9 +349,15 @@ export default function Markets() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{marketStats.fearGreedIndex}</div>
+            <div className={`text-2xl font-bold ${
+              marketStats.fearGreedIndex > 60 ? 'text-green-600' : 
+              marketStats.fearGreedIndex > 40 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round(marketStats.fearGreedIndex)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Greed
+              {marketStats.fearGreedIndex > 60 ? 'Greed' : 
+               marketStats.fearGreedIndex > 40 ? 'Neutral' : 'Fear'}
             </p>
           </CardContent>
         </Card>
@@ -320,91 +427,98 @@ export default function Markets() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead></TableHead>
-                  <TableHead>Asset</TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={() => handleSort('price')}>
-                    Price
-                  </TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={() => handleSort('change24h')}>
-                    24h Change
-                  </TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={() => handleSort('volume24h')}>
-                    Volume
-                  </TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={() => handleSort('marketCap')}>
-                    Market Cap
-                  </TableHead>
-                  <TableHead className="text-right">7d Chart</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedData.map((token, index) => (
-                  <TableRow key={token.id}>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleWatchlist(token.id)}
-                      >
-                        <Star 
-                          className={`h-4 w-4 ${
-                            watchlist.has(token.id) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
-                          }`} 
-                        />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-lg">{token.logo}</span>
-                        <div>
-                          <div className="font-medium">{token.symbol}</div>
-                          <div className="text-sm text-muted-foreground">{token.name}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(token.price)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className={`flex items-center justify-end ${
-                        token.change24h >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {token.change24h >= 0 ? (
-                          <TrendingUp className="h-4 w-4 mr-1" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 mr-1" />
-                        )}
-                        {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}%
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(token.volume24h / 1e9)}B
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(token.marketCap / 1e9)}B
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="w-20 h-8">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={token.sparklineData}>
-                            <Line 
-                              type="monotone" 
-                              dataKey="price" 
-                              stroke={token.change24h >= 0 ? "#10B981" : "#EF4444"}
-                              strokeWidth={1.5}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </TableCell>
+            {loading && processedData.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                <span>Loading market data...</span>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead></TableHead>
+                    <TableHead>Asset</TableHead>
+                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('price')}>
+                      Price
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('changePercent24h')}>
+                      24h Change
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('volume24h')}>
+                      Volume
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('marketCap')}>
+                      Market Cap
+                    </TableHead>
+                    <TableHead className="text-right">7d Chart</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {processedData.map((token) => (
+                    <TableRow key={token.id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleWatchlist(token.symbol)}
+                        >
+                          <Star 
+                            className={`h-4 w-4 ${
+                              token.isWatchlisted ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
+                            }`} 
+                          />
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg">{token.logo}</span>
+                          <div>
+                            <div className="font-medium">{token.symbol}</div>
+                            <div className="text-sm text-muted-foreground">{token.name}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(token.price)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className={`flex items-center justify-end ${
+                          token.changePercent24h >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {token.changePercent24h >= 0 ? (
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 mr-1" />
+                          )}
+                          {token.changePercent24h >= 0 ? '+' : ''}{token.changePercent24h.toFixed(2)}%
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(token.volume24h / 1e9)}B
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(token.marketCap / 1e9)}B
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="w-20 h-8">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={token.sparklineData}>
+                              <Line 
+                                type="monotone" 
+                                dataKey="price" 
+                                stroke={token.changePercent24h >= 0 ? "#10B981" : "#EF4444"}
+                                strokeWidth={1.5}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
